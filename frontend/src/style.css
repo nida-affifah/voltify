@@ -1,0 +1,469 @@
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--gray);
+}
+
+/* Empty States */
+.empty-cart, .empty-wishlist, .empty-orders, .empty-feed, .empty-live {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-cart i, .empty-wishlist i, .empty-orders i, .empty-feed i, .empty-live i {
+    font-size: 64px;
+    color: var(--gray-light);
+    margin-bottom: 16px;
+}
+
+.empty-cart h2, .empty-wishlist h3, .empty-orders h3, .empty-feed h3, .empty-live h3 {
+    margin-bottom: 8px;
+}
+
+.empty-cart p, .empty-wishlist p, .empty-orders p, .empty-feed p, .empty-live p {
+    color: var(--gray);
+    margin-bottom: 24px;
+}
+
+/* Error Page */
+.error-404 {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.error-404 i {
+    font-size: 80px;
+    color: var(--gray-light);
+    margin-bottom: 24px;
+}
+
+.error-404 h1 {
+    font-size: 72px;
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+
+.error-404 p {
+    color: var(--gray);
+    margin-bottom: 32px;
+}
+
+.btn-home {
+    display: inline-block;
+    background: var(--primary);
+    color: var(--white);
+    padding: 12px 32px;
+    border-radius: 40px;
+    text-decoration: none;
+}
+
+/* Profile Page */
+.profile-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+}
+
+.profile-sidebar {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    text-align: center;
+}
+
+.profile-avatar {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 16px;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-upload-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--primary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--white);
+}
+
+.profile-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.profile-username {
+    color: var(--gray);
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.tier-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+    padding: 16px 0;
+    border-top: 1px solid var(--gray-light);
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.profile-content {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 24px;
+}
+
+.profile-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--gray-light);
+    margin-bottom: 24px;
+}
+
+.profile-tab {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray);
+    transition: all 0.3s;
+}
+
+.profile-tab.active {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+}
+
+.profile-tab-content {
+    display: none;
+}
+
+.profile-tab-content.active {
+    display: block;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-light);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.btn-save {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+}
+
+.btn-save:hover {
+    background: var(--primary-dark);
+}
+
+/* Address Card */
+.address-card {
+    border: 1px solid var(--gray-light);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.address-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.primary-badge {
+    background: var(--success);
+    color: var(--white);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 8px;
+}
+
+.address-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.address-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid var(--gray-light);
+    background: var(--white);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+}
+
+.address-actions button:hover {
+    background: var(--gray-lighter);
+}
+
+/* Live Streaming Page */
+.live-detail-container {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    height: calc(100vh - 140px);
+    gap: 0;
+}
+
+.live-player {
+    position: relative;
+    background: #000;
+}
+
+.live-player video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.live-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    pointer-events: none;
+}
+
+.live-badge-large {
+    background: var(--danger);
+    color: var(--white);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.viewer-count-large {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    color: var(--white);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.live-sidebar {
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.live-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.chat-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.chat-message {
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.chat-message strong {
+    color: var(--primary);
+}
+
+.chat-message.system {
+    text-align: center;
+    color: var(--gray);
+    font-style: italic;
+}
+
+.chat-input {
+    padding: 16px;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--gray-light);
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--gray-light);
+    border-radius: 40px;
+    font-size: 14px;
+}
+
+.chat-input button {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.live-products {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.live-product {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--gray-light);
+    border-radius: var(--border-radius);
+    margin-bottom: 12px;
+}
+
+.live-product img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--border-radius-sm);
+}
+
+.live-product .product-info {
+    flex: 1;
+}
+
+.live-product .product-name {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.live-product .product-price {
+    font-size: 12px;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.btn-add-cart-live {
+    background: rgba(238,77,45,0.1);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+}

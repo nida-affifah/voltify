@@ -1,0 +1,445 @@
+/* src/styles/animations.css - Animasi Super Seru */
+
+/* ============================================
+   ENTRANCE ANIMATIONS - DRAMATIC
+   ============================================ */
+
+@keyframes explodeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes swingIn {
+  0% {
+    opacity: 0;
+    transform: rotateX(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0);
+  }
+}
+
+@keyframes flipIn {
+  0% {
+    opacity: 0;
+    transform: rotateY(90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateY(0);
+  }
+}
+
+@keyframes glitchIn {
+  0% {
+    opacity: 0;
+    transform: skew(10deg) translateX(-50px);
+    filter: blur(10px);
+  }
+  20% {
+    transform: skew(-5deg) translateX(20px);
+  }
+  40% {
+    transform: skew(5deg) translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: skew(0) translateX(0);
+    filter: blur(0);
+  }
+}
+
+/* ============================================
+   CONTINUOUS ANIMATIONS - ALWAYS MOVING
+   ============================================ */
+
+@keyframes floatPulse {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 0 2px rgba(0,212,255,0.3));
+  }
+  25% {
+    transform: translateY(-15px) scale(1.02);
+    filter: drop-shadow(0 0 15px rgba(0,212,255,0.6));
+  }
+  75% {
+    transform: translateY(8px) scale(0.98);
+    filter: drop-shadow(0 0 8px rgba(0,212,255,0.4));
+  }
+}
+
+@keyframes rotateGlow {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 2px rgba(0,212,255,0.3));
+  }
+  50% {
+    transform: rotate(180deg);
+    filter: drop-shadow(0 0 20px rgba(0,212,255,0.8));
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: drop-shadow(0 0 2px rgba(0,212,255,0.3));
+  }
+}
+
+@keyframes waveMove {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-10px) translateY(-5px);
+  }
+  75% {
+    transform: translateX(10px) translateY(5px);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes rainbowBorder {
+  0% {
+    border-color: #ff6b6b;
+  }
+  25% {
+    border-color: #ffd93d;
+  }
+  50% {
+    border-color: #6bff6b;
+  }
+  75% {
+    border-color: #6b6bff;
+  }
+  100% {
+    border-color: #ff6b6b;
+  }
+}
+
+/* ============================================
+   INTERACTIVE ANIMATIONS - ON HOVER/CLICK
+   ============================================ */
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.7;
+    filter: brightness(1.5);
+  }
+}
+
+@keyframes rubberBand {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25, 0.75);
+  }
+  40% {
+    transform: scale(0.75, 1.25);
+  }
+  50% {
+    transform: scale(1.15, 0.85);
+  }
+  65% {
+    transform: scale(0.95, 1.05);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* ============================================
+   BACKGROUND ANIMATIONS - EPIC
+   ============================================ */
+
+@keyframes galaxyRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes meteorShower {
+  0% {
+    transform: translateX(-100px) translateY(-100px) rotate(45deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(100vw) translateY(100vh) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   ANIMATION CLASSES
+   ============================================ */
+
+/* Entrance */
+.explode-in {
+  animation: explodeIn 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+.bounce-in {
+  animation: bounceIn 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+.swing-in {
+  animation: swingIn 0.5s ease-out forwards;
+}
+
+.flip-in {
+  animation: flipIn 0.6s ease-out forwards;
+}
+
+.glitch-in {
+  animation: glitchIn 0.5s ease-out forwards;
+}
+
+/* Continuous */
+.float-pulse {
+  animation: floatPulse 3s ease-in-out infinite;
+}
+
+.rotate-glow {
+  animation: rotateGlow 4s linear infinite;
+}
+
+.wave-move {
+  animation: waveMove 5s ease-in-out infinite;
+}
+
+.pulse-ring {
+  position: relative;
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  background: var(--primary);
+  animation: pulseRing 1.5s ease-out infinite;
+  opacity: 0;
+}
+
+/* Interactive */
+.shake-on-hover:hover {
+  animation: shake 0.4s ease-in-out;
+}
+
+.wiggle-on-hover:hover {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+.heartbeat-on-hover:hover {
+  animation: heartbeat 0.5s ease-in-out;
+}
+
+.flash-on-hover:hover {
+  animation: flash 0.3s ease-in-out;
+}
+
+.rubber-band-on-hover:hover {
+  animation: rubberBand 0.6s ease-out;
+}
+
+/* Background */
+.galaxy-bg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 70%);
+  animation: galaxyRotate 30s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Card Effects */
+.card-3d {
+  transition: transform 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+}
+
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform: rotate(30deg);
+  animation: cardShine 3s ease-in-out infinite;
+}
+
+@keyframes cardShine {
+  0% {
+    transform: translateX(-100%) rotate(30deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(30deg);
+  }
+}
+
+/* Button Effects */
+.btn-3d {
+  transition: all 0.2s ease;
+  box-shadow: 0 5px 0 #0a5f4a;
+}
+
+.btn-3d:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #0a5f4a;
+}
+
+/* Loading */
+.loading-pulse {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00d4ff, #00ffaa);
+  animation: loadingPulse 1s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Meteor Effect */
+.meteor {
+  position: fixed;
+  width: 2px;
+  height: 50px;
+  background: linear-gradient(180deg, #00d4ff, transparent);
+  animation: meteorShower 3s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}

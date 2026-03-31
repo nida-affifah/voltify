@@ -1,0 +1,500 @@
+/* ========== ANIMATIONS ========== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+  75% {
+    transform: translateY(8px) rotate(-5deg);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes rotateSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(238, 77, 45, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(238, 77, 45, 0.5);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========== REVEAL ON SCROLL ========== */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ========== SERVICE CARDS ========== */
+.service-card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== FLASH SALE ========== */
+.flash-sale-banner {
+  position: relative;
+  overflow: hidden;
+}
+
+.flash-sale-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.flash-sale-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ========== CATEGORY ITEMS ========== */
+.category-item {
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  cursor: pointer;
+  animation: fadeInUp 0.5s ease-out both;
+  text-align: center;
+}
+
+.category-item:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.category-item:hover div:first-child {
+  transform: scale(1.1);
+}
+
+/* ========== PRODUCT CARDS ========== */
+.product-card {
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+}
+
+.product-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.15);
+}
+
+.product-card img {
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.product-card:hover img {
+  transform: scale(1.08);
+}
+
+/* ========== DEAL CARDS ========== */
+.deal-card {
+  background: #f9f9f9;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.deal-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== VOUCHER CARDS ========== */
+.voucher-card {
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe6d5 100%);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.voucher-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.voucher-btn {
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.voucher-btn:hover {
+  transform: scale(1.05);
+  background: #d93c1c;
+}
+
+/* ========== BRAND ITEMS ========== */
+.brand-item {
+  text-align: center;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 14px;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: fadeInUp 0.5s ease-out both;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+
+.brand-item:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== BUTTONS ========== */
+.btn-primary {
+  background: white;
+  color: #ee4d2d;
+  padding: 14px 44px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+.btn-primary:hover span {
+  transform: translateX(8px);
+}
+
+/* ========== FLOATING BUTTONS ========== */
+.back-to-top {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0.9;
+}
+
+.back-to-top:hover {
+  transform: scale(1.1);
+  background: #d93c1c;
+}
+
+.chat-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 26px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.chat-button:hover {
+  transform: scale(1.1);
+  background: #d93c1c;
+}
+
+/* ========== LOADING SPINNER ========== */
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ee4d2d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ========== CAROUSEL CONTROLS ========== */
+.carousel-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.carousel-control:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.carousel-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.carousel-indicator.active {
+  width: 40px;
+  background: white;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+.carousel-indicator.inactive {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ========== TIMER COMPONENT ========== */
+.timer-block {
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px 18px;
+  border-radius: 14px;
+  min-width: 75px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.timer-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+}
+
+.timer-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ========== BADGES ========== */
+.discount-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #ee4d2d;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 25px;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.promo-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  padding: 8px 20px;
+  border-radius: 40px;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  
+  .category-grid {
+    grid-template-columns: repeat(6, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    height: 400px !important;
+  }
+  
+  .hero-title {
+    font-size: 36px !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 18px !important;
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .category-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  
+  .timer-block {
+    min-width: 60px;
+    padding: 8px 12px;
+  }
+  
+  .timer-value {
+    font-size: 20px;
+  }
+  
+  .flash-sale-container {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-section {
+    height: 350px !important;
+  }
+  
+  .hero-title {
+    font-size: 28px !important;
+  }
+  
+  .product-grid {
+    gap: 12px !important;
+  }
+  
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  .timer-block {
+    min-width: 50px;
+    padding: 6px 8px;
+  }
+  
+  .timer-value {
+    font-size: 16px;
+  }
+  
+  .timer-label {
+    font-size: 9px;
+  }
+}
