@@ -1,220 +1,219 @@
+// backend/controllers/cartController.js
 const pool = require('../config/database');
 
-// Get user cart
-const getCart = async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT k.id_keranjang, k.id_produk, k.id_varian, k.jumlah, 
-                    k.harga_saat_ditambahkan, k.catatan, k.created_at,
-                    p.nama_produk, p.gambar_utama, p.stok as produk_stok,
-                    p.harga, p.harga_diskon,
-                    v.nama_varian, v.stok as varian_stok,
-                    t.nama_toko, t.id_toko
-             FROM keranjang k
-             JOIN produk p ON k.id_produk = p.id_produk
-             JOIN toko t ON p.id_toko = t.id_toko
-             LEFT JOIN varian_produk v ON k.id_varian = v.id_varian
-             WHERE k.id_user = $1
-             ORDER BY k.created_at DESC`,
-            [req.user.id_user]
-        );
-        
-        let subtotal = 0;
-        const items = result.rows.map(item => {
-            const price = item.harga_diskon || item.harga;
-            const itemTotal = price * item.jumlah;
-            subtotal += itemTotal;
-            return {
-                ...item,
-                harga_satuan: price,
-                subtotal: itemTotal
-            };
-        });
-        
-        res.json({
-            success: true,
-            items,
-            summary: {
-                total_items: items.reduce((sum, item) => sum + item.jumlah, 0),
-                subtotal,
-                shipping_fee: 0,
-                total: subtotal
-            }
-        });
-    } catch (error) {
-        console.error('Get cart error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+// Add to cart (mengurangi stok sementara - reserved)
+const addToCart = async (req, res) => {
+  const { id_produk, jumlah } = req.body;
+  const userId = req.user.id_user;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Cek stok produk
+    const productCheck = await client.query(
+      'SELECT stok FROM produk WHERE id_produk = $1 FOR UPDATE',
+      [id_produk]
+    );
+    
+    if (productCheck.rows.length === 0) {
+      throw new Error('Produk tidak ditemukan');
     }
+    
+    const currentStock = productCheck.rows[0].stok;
+    if (currentStock < jumlah) {
+      throw new Error('Stok tidak mencukupi');
+    }
+    
+    // Cek apakah produk sudah ada di keranjang
+    const existingCart = await client.query(
+      'SELECT * FROM keranjang WHERE id_user = $1 AND id_produk = $2',
+      [userId, id_produk]
+    );
+    
+    if (existingCart.rows.length > 0) {
+      // Update jumlah di keranjang
+      await client.query(
+        'UPDATE keranjang SET jumlah = jumlah + $1, updated_at = NOW() WHERE id_user = $2 AND id_produk = $3',
+        [jumlah, userId, id_produk]
+      );
+    } else {
+      // Tambah ke keranjang
+      await client.query(
+        'INSERT INTO keranjang (id_user, id_produk, jumlah, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
+        [userId, id_produk, jumlah]
+      );
+    }
+    
+    // Kurangi stok produk (reserved)
+    await client.query(
+      'UPDATE produk SET stok = stok - $1 WHERE id_produk = $2',
+      [jumlah, id_produk]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Produk ditambahkan ke keranjang' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Add to cart error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
 };
 
-// Add to cart
-const addToCart = async (req, res) => {
-    const { id_produk, id_varian, jumlah, catatan } = req.body;
+// Get cart
+const getCart = async (req, res) => {
+  const userId = req.user.id_user;
+  try {
+    const result = await pool.query(
+      `SELECT k.*, p.nama_produk, p.harga, p.harga_diskon, p.gambar_utama,
+              p.stok as available_stock,
+              CASE WHEN p.harga_diskon > 0 THEN p.harga_diskon ELSE p.harga END as harga_satuan
+       FROM keranjang k
+       JOIN produk p ON k.id_produk = p.id_produk
+       WHERE k.id_user = $1
+       ORDER BY k.created_at DESC`,
+      [userId]
+    );
     
-    if (!id_produk || !jumlah || jumlah < 1) {
-        return res.status(400).json({ success: false, message: 'Data tidak lengkap' });
-    }
+    const items = result.rows.map(item => ({
+      id_keranjang: item.id_keranjang,
+      id_produk: item.id_produk,
+      nama_produk: item.nama_produk,
+      jumlah: item.jumlah,
+      harga_satuan: parseFloat(item.harga_satuan),
+      subtotal: item.jumlah * parseFloat(item.harga_satuan),
+      gambar_utama: item.gambar_utama,
+      available_stock: item.available_stock,
+      harga: item.harga,
+      harga_diskon: item.harga_diskon
+    }));
     
-    try {
-        let harga;
-        
-        if (id_varian) {
-            const varianResult = await pool.query(
-                `SELECT v.*, p.harga, p.harga_diskon
-                 FROM varian_produk v
-                 JOIN produk p ON v.id_produk = p.id_produk
-                 WHERE v.id_varian = $1`,
-                [id_varian]
-            );
-            
-            if (varianResult.rows.length === 0) {
-                return res.status(404).json({ success: false, message: 'Varian produk tidak ditemukan' });
-            }
-            
-            const varian = varianResult.rows[0];
-            if (varian.stok < jumlah) {
-                return res.status(400).json({ success: false, message: `Stok varian ${varian.nama_varian} tidak mencukupi` });
-            }
-            
-            const basePrice = varian.harga_diskon || varian.harga;
-            harga = basePrice + (varian.harga_extra || 0);
-        } else {
-            const productResult = await pool.query(
-                `SELECT p.* FROM produk p WHERE p.id_produk = $1 AND p.is_active = true`,
-                [id_produk]
-            );
-            
-            if (productResult.rows.length === 0) {
-                return res.status(404).json({ success: false, message: 'Produk tidak ditemukan' });
-            }
-            
-            const product = productResult.rows[0];
-            if (product.stok < jumlah) {
-                return res.status(400).json({ success: false, message: 'Stok produk tidak mencukupi' });
-            }
-            
-            harga = product.harga_diskon || product.harga;
-        }
-        
-        const existingCart = await pool.query(
-            `SELECT id_keranjang, jumlah FROM keranjang 
-             WHERE id_user = $1 AND id_produk = $2 AND 
-             (id_varian = $3 OR (id_varian IS NULL AND $3 IS NULL))`,
-            [req.user.id_user, id_produk, id_varian || null]
-        );
-        
-        if (existingCart.rows.length > 0) {
-            const newJumlah = existingCart.rows[0].jumlah + jumlah;
-            await pool.query(
-                `UPDATE keranjang 
-                 SET jumlah = $1, updated_at = CURRENT_TIMESTAMP
-                 WHERE id_keranjang = $2`,
-                [newJumlah, existingCart.rows[0].id_keranjang]
-            );
-        } else {
-            await pool.query(
-                `INSERT INTO keranjang (id_user, id_produk, id_varian, jumlah, harga_saat_ditambahkan, catatan)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [req.user.id_user, id_produk, id_varian || null, jumlah, harga, catatan]
-            );
-        }
-        
-        const cartCount = await pool.query(
-            `SELECT COUNT(*) as total FROM keranjang WHERE id_user = $1`,
-            [req.user.id_user]
-        );
-        
-        res.json({ 
-            success: true, 
-            message: 'Produk berhasil ditambahkan ke keranjang',
-            cart_count: parseInt(cartCount.rows[0].total)
-        });
-    } catch (error) {
-        console.error('Add to cart error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    res.json({ success: true, items, subtotal });
+  } catch (error) {
+    console.error('Get cart error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
 // Update cart quantity
 const updateCart = async (req, res) => {
-    const { id } = req.params;
-    const { jumlah } = req.body;
+  const { id } = req.params;
+  const { jumlah } = req.body;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
     
-    if (!jumlah || jumlah < 1) {
-        return res.status(400).json({ success: false, message: 'Jumlah tidak valid' });
+    // Ambil data keranjang
+    const cartItem = await client.query(
+      'SELECT * FROM keranjang WHERE id_keranjang = $1 AND id_user = $2',
+      [id, userId]
+    );
+    
+    if (cartItem.rows.length === 0) {
+      throw new Error('Item tidak ditemukan');
     }
     
-    try {
-        const result = await pool.query(
-            `UPDATE keranjang 
-             SET jumlah = $1, updated_at = CURRENT_TIMESTAMP
-             WHERE id_keranjang = $2 AND id_user = $3
-             RETURNING *`,
-            [jumlah, id, req.user.id_user]
+    const oldJumlah = cartItem.rows[0].jumlah;
+    const productId = cartItem.rows[0].id_produk;
+    const selisih = jumlah - oldJumlah;
+    
+    if (selisih !== 0) {
+      // Cek stok jika menambah jumlah
+      if (selisih > 0) {
+        const productCheck = await client.query(
+          'SELECT stok FROM produk WHERE id_produk = $1 FOR UPDATE',
+          [productId]
         );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Item keranjang tidak ditemukan' });
+        if (productCheck.rows[0].stok < selisih) {
+          throw new Error('Stok tidak mencukupi');
         }
-        
-        res.json({ success: true, message: 'Keranjang berhasil diperbarui' });
-    } catch (error) {
-        console.error('Update cart error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+      }
+      
+      // Update stok produk
+      await client.query(
+        'UPDATE produk SET stok = stok - $1 WHERE id_produk = $2',
+        [selisih, productId]
+      );
+      
+      // Update keranjang
+      if (jumlah <= 0) {
+        await client.query(
+          'DELETE FROM keranjang WHERE id_keranjang = $1',
+          [id]
+        );
+      } else {
+        await client.query(
+          'UPDATE keranjang SET jumlah = $1, updated_at = NOW() WHERE id_keranjang = $2',
+          [jumlah, id]
+        );
+      }
     }
+    
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Keranjang diupdate' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Update cart error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
 };
 
-// Remove from cart
+// Remove from cart (kembalikan stok)
 const removeFromCart = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
     
-    try {
-        const result = await pool.query(
-            `DELETE FROM keranjang 
-             WHERE id_keranjang = $1 AND id_user = $2
-             RETURNING *`,
-            [id, req.user.id_user]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Item keranjang tidak ditemukan' });
-        }
-        
-        res.json({ success: true, message: 'Item berhasil dihapus dari keranjang' });
-    } catch (error) {
-        console.error('Remove from cart error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    // Ambil data keranjang
+    const cartItem = await client.query(
+      'SELECT * FROM keranjang WHERE id_keranjang = $1 AND id_user = $2',
+      [id, userId]
+    );
+    
+    if (cartItem.rows.length === 0) {
+      throw new Error('Item tidak ditemukan');
     }
+    
+    const jumlah = cartItem.rows[0].jumlah;
+    const productId = cartItem.rows[0].id_produk;
+    
+    // Kembalikan stok
+    await client.query(
+      'UPDATE produk SET stok = stok + $1 WHERE id_produk = $2',
+      [jumlah, productId]
+    );
+    
+    // Hapus dari keranjang
+    await client.query(
+      'DELETE FROM keranjang WHERE id_keranjang = $1',
+      [id]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Produk dihapus dari keranjang' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Remove from cart error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
 };
 
-// Clear cart
-const clearCart = async (req, res) => {
-    try {
-        await pool.query(
-            'DELETE FROM keranjang WHERE id_user = $1',
-            [req.user.id_user]
-        );
-        
-        res.json({ success: true, message: 'Keranjang berhasil dikosongkan' });
-    } catch (error) {
-        console.error('Clear cart error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
+module.exports = {
+  addToCart,
+  getCart,
+  updateCart,
+  removeFromCart
 };
-
-// Get cart count
-const getCartCount = async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT SUM(jumlah) as total FROM keranjang WHERE id_user = $1`,
-            [req.user.id_user]
-        );
-        
-        res.json({ success: true, count: parseInt(result.rows[0].total) || 0 });
-    } catch (error) {
-        console.error('Get cart count error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
-};
-
-module.exports = { getCart, addToCart, updateCart, removeFromCart, clearCart, getCartCount };

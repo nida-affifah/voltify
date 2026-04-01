@@ -19,7 +19,7 @@ const getTokoById = async (req, res) => {
         
         const toko = result.rows[0];
         
-        // Get products count
+        // Get produk count
         const productsCount = await pool.query(
             `SELECT COUNT(*) as total FROM produk WHERE id_toko = $1 AND is_active = true`,
             [id]

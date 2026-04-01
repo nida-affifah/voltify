@@ -1,352 +1,327 @@
-const pool = require('../config/database');
+﻿const pool = require('../config/database');
 
-// Create order
-const createOrder = async (req, res) => {
-    const { id_alamat, id_metode_pembayaran, id_voucher, catatan } = req.body;
+// ================= CHECKOUT DARI KERANJANG =================
+const checkout = async (req, res) => {
+  const { cartIds, alamat_pengiriman, metode_pembayaran } = req.body;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
     
-    if (!id_alamat || !id_metode_pembayaran) {
-        return res.status(400).json({ success: false, message: 'Alamat dan metode pembayaran harus dipilih' });
+    const cartItems = await client.query(
+      `SELECT c.*, p.harga, p.harga_diskon, p.nama_produk, p.id_toko
+       FROM keranjang c
+       JOIN produk p ON c.id_produk = p.id_produk
+       WHERE c.id_keranjang = ANY($1::int[]) AND c.id_user = $2
+       FOR UPDATE`,
+      [cartIds, userId]
+    );
+    
+    if (cartItems.rows.length === 0) {
+      throw new Error('Keranjang kosong');
     }
     
-    const client = await pool.connect();
+    let total = 0;
+    const items = cartItems.rows.map(item => {
+      const harga = item.harga_diskon || item.harga;
+      total += parseFloat(harga) * item.jumlah;
+      return {
+        id_produk: item.id_produk,
+        nama_produk: item.nama_produk,
+        jumlah: item.jumlah,
+        harga_satuan: harga,
+        id_toko: item.id_toko
+      };
+    });
     
-    try {
-        await client.query('BEGIN');
-        
-        const cartResult = await client.query(
-            `SELECT k.id_produk, k.id_varian, k.jumlah, k.harga_saat_ditambahkan,
-                    p.nama_produk, p.harga, p.harga_diskon, p.id_toko,
-                    v.nama_varian
-             FROM keranjang k
-             JOIN produk p ON k.id_produk = p.id_produk
-             LEFT JOIN varian_produk v ON k.id_varian = v.id_varian
-             WHERE k.id_user = $1`,
-            [req.user.id_user]
-        );
-        
-        if (cartResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ success: false, message: 'Keranjang belanja kosong' });
-        }
-        
-        let total_harga_produk = 0;
-        
-        for (const item of cartResult.rows) {
-            const price = item.harga_diskon || item.harga;
-            const subtotal = price * item.jumlah;
-            total_harga_produk += subtotal;
-        }
-        
-        let voucher_potongan = 0;
-        let voucher_info = null;
-        
-        if (id_voucher) {
-            const voucherResult = await client.query(
-                `SELECT * FROM voucher_marketplace 
-                 WHERE id_voucher = $1 AND is_active = true 
-                 AND CURRENT_TIMESTAMP BETWEEN berlaku_mulai AND berlaku_sampai
-                 AND sisa_kuota > 0`,
-                [id_voucher]
-            );
-            
-            if (voucherResult.rows.length > 0) {
-                voucher_info = voucherResult.rows[0];
-                
-                if (total_harga_produk >= voucher_info.minimal_belanja) {
-                    if (voucher_info.tipe === 'potongan_harga') {
-                        voucher_potongan = Math.min(voucher_info.nilai, voucher_info.maksimal_potongan || voucher_info.nilai);
-                    } else if (voucher_info.tipe === 'persen') {
-                        voucher_potongan = (total_harga_produk * voucher_info.nilai / 100);
-                        if (voucher_info.maksimal_potongan) {
-                            voucher_potongan = Math.min(voucher_potongan, voucher_info.maksimal_potongan);
-                        }
-                    }
-                }
-            }
-        }
-        
-        const biaya_pengiriman = 15000;
-        let biaya_admin = 0;
-        
-        const metodeResult = await client.query(
-            `SELECT biaya_admin FROM metode_pembayaran WHERE id_metode = $1`,
-            [id_metode_pembayaran]
-        );
-        if (metodeResult.rows.length > 0) {
-            biaya_admin = metodeResult.rows[0].biaya_admin || 0;
-        }
-        
-        const grand_total = total_harga_produk - voucher_potongan + biaya_pengiriman + biaya_admin;
-        
-        const transaksiResult = await client.query(
-            `INSERT INTO transaksi (id_user, id_alamat, id_metode_pembayaran, id_voucher,
-                voucher_potongan, total_harga_produk, total_diskon_produk,
-                biaya_pengiriman, biaya_admin, grand_total, catatan, status_order)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
-             RETURNING id_transaksi, invoice_number`,
-            [req.user.id_user, id_alamat, id_metode_pembayaran, id_voucher || null,
-             voucher_potongan, total_harga_produk, 0, biaya_pengiriman, biaya_admin, grand_total, catatan]
-        );
-        
-        const id_transaksi = transaksiResult.rows[0].id_transaksi;
-        const invoice_number = transaksiResult.rows[0].invoice_number;
-        
-        for (const item of cartResult.rows) {
-            const price = item.harga_diskon || item.harga;
-            const subtotal = price * item.jumlah;
-            
-            await client.query(
-                `INSERT INTO detail_transaksi (id_transaksi, id_produk, id_varian, id_toko,
-                    nama_produk_saat_transaksi, harga_satuan_saat_transaksi, jumlah, subtotal)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [id_transaksi, item.id_produk, item.id_varian || null, item.id_toko,
-                 item.nama_produk, price, item.jumlah, subtotal]
-            );
-            
-            if (item.id_varian) {
-                await client.query(
-                    `UPDATE varian_produk SET stok = stok - $1 WHERE id_varian = $2`,
-                    [item.jumlah, item.id_varian]
-                );
-            } else {
-                await client.query(
-                    `UPDATE produk SET stok = stok - $1 WHERE id_produk = $2`,
-                    [item.jumlah, item.id_produk]
-                );
-            }
-        }
-        
-        await client.query(
-            `DELETE FROM keranjang WHERE id_user = $1`,
-            [req.user.id_user]
-        );
-        
-        if (voucher_info) {
-            await client.query(
-                `UPDATE voucher_marketplace SET sisa_kuota = sisa_kuota - 1 WHERE id_voucher = $1`,
-                [id_voucher]
-            );
-        }
-        
-        await client.query(
-            `INSERT INTO notifikasi (id_user, judul, pesan, tipe, link)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [req.user.id_user, 'Pesanan Dibuat! 📦', 
-             `Pesanan dengan invoice ${invoice_number} berhasil dibuat. Silakan lakukan pembayaran.`, 
-             'order', `/orders/${id_transaksi}`]
-        );
-        
-        await client.query('COMMIT');
-        
-        res.json({
-            success: true,
-            message: 'Pesanan berhasil dibuat',
-            order: {
-                id: id_transaksi,
-                invoice_number,
-                grand_total,
-                status: 'pending'
-            }
-        });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Create order error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    } finally {
-        client.release();
+    const orderResult = await client.query(
+      `INSERT INTO transaksi (id_user, total_harga_produk, grand_total, status_order, status_pembayaran)
+       VALUES ($1, $2, $3, 'pending', 'pending')
+       RETURNING id_transaksi`,
+      [userId, total, total]
+    );
+    
+    const orderId = orderResult.rows[0].id_transaksi;
+    
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO detail_transaksi (id_transaksi, id_produk, id_toko, nama_produk_saat_transaksi, harga_satuan_saat_transaksi, jumlah, subtotal)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [orderId, item.id_produk, item.id_toko, item.nama_produk, item.harga_satuan, item.jumlah, item.harga_satuan * item.jumlah]
+      );
     }
+    
+    await client.query(
+      'DELETE FROM keranjang WHERE id_keranjang = ANY($1::int[]) AND id_user = $2',
+      [cartIds, userId]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, orderId, message: 'Checkout berhasil' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Checkout error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
 };
 
-// Get user orders
+// ================= BUY NOW =================
+const buyNow = async (req, res) => {
+  const { id_produk, jumlah } = req.body;
+  const userId = req.user.id_user;
+  
+  console.log('Buy now request:', { id_produk, jumlah, userId });
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const product = await client.query(
+      'SELECT * FROM produk WHERE id_produk = $1 FOR UPDATE',
+      [id_produk]
+    );
+    
+    if (product.rows.length === 0) {
+      throw new Error('Produk tidak ditemukan');
+    }
+    
+    const productData = product.rows[0];
+    const harga = productData.harga_diskon || productData.harga;
+    const total = parseFloat(harga) * (jumlah || 1);
+    
+    const orderResult = await client.query(
+      `INSERT INTO transaksi (id_user, total_harga_produk, grand_total, status_order, status_pembayaran)
+       VALUES ($1, $2, $3, 'pending', 'pending')
+       RETURNING id_transaksi`,
+      [userId, total, total]
+    );
+    
+    const orderId = orderResult.rows[0].id_transaksi;
+    
+    await client.query(
+      `INSERT INTO detail_transaksi (id_transaksi, id_produk, id_toko, nama_produk_saat_transaksi, harga_satuan_saat_transaksi, jumlah, subtotal)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [orderId, id_produk, productData.id_toko, productData.nama_produk, harga, jumlah || 1, total]
+    );
+    
+    await client.query(
+      'UPDATE produk SET stok = stok - $1 WHERE id_produk = $2',
+      [jumlah || 1, id_produk]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      orderId, 
+      message: 'Pesanan berhasil dibuat'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Buy now error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
+};
+
+// ================= GET ALL ORDERS =================
 const getOrders = async (req, res) => {
-    const { page = 1, limit = 10, status } = req.query;
-    const offset = (page - 1) * limit;
+  try {
+    const userId = req.user.id_user;
+    const result = await pool.query(
+      `SELECT t.*, 
+              COALESCE(t.metode_pembayaran, 'Belum dipilih') as metode_pembayaran,
+              COALESCE(t.biaya_pengiriman, 15000) as biaya_pengiriman,
+              COALESCE(t.kurir, 'JNE Reguler') as kurir,
+              COALESCE(t.alamat_pengiriman, 'Jl. Contoh Alamat No.123, Jakarta') as alamat_pengiriman
+       FROM transaksi t
+       WHERE t.id_user = $1 
+       ORDER BY t.created_at DESC`,
+      [userId]
+    );
     
-    try {
-        let query = `
-            SELECT t.*, a.penerima, a.alamat_lengkap, a.kota, mp.nama_metode
-            FROM transaksi t
-            JOIN alamat_pengiriman a ON t.id_alamat = a.id_alamat
-            JOIN metode_pembayaran mp ON t.id_metode_pembayaran = mp.id_metode
-            WHERE t.id_user = $1
-        `;
-        const values = [req.user.id_user];
-        let valueIndex = 2;
-        
-        if (status) {
-            query += ` AND t.status_order = $${valueIndex}`;
-            values.push(status);
-            valueIndex++;
-        }
-        
-        query += ` ORDER BY t.created_at DESC LIMIT $${valueIndex} OFFSET $${valueIndex + 1}`;
-        values.push(limit, offset);
-        
-        const result = await pool.query(query, values);
-        
-        const countResult = await pool.query(
-            `SELECT COUNT(*) as total FROM transaksi WHERE id_user = $1`,
-            [req.user.id_user]
-        );
-        
-        res.json({
-            success: true,
-            orders: result.rows,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: parseInt(countResult.rows[0].total),
-                totalPages: Math.ceil(parseInt(countResult.rows[0].total) / limit)
-            }
-        });
-    } catch (error) {
-        console.error('Get orders error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    const ordersWithItems = [];
+    for (const order of result.rows) {
+      const items = await pool.query(
+        `SELECT dt.*, p.nama_produk, p.gambar_utama
+         FROM detail_transaksi dt
+         JOIN produk p ON dt.id_produk = p.id_produk
+         WHERE dt.id_transaksi = $1`,
+        [order.id_transaksi]
+      );
+      ordersWithItems.push({
+        ...order,
+        items: items.rows
+      });
     }
+    
+    res.json({ success: true, orders: ordersWithItems });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Get order detail
+// ================= GET ORDER DETAIL =================
 const getOrderDetail = async (req, res) => {
+  try {
     const { id } = req.params;
-    
-    try {
-        const orderResult = await pool.query(
-            `SELECT t.*, a.penerima, a.no_hp as penerima_hp, a.alamat_lengkap, a.kota, a.provinsi, a.kode_pos,
-                    mp.nama_metode, mp.biaya_admin,
-                    v.kode_voucher, v.nama_voucher, v.tipe, v.nilai
-             FROM transaksi t
-             JOIN alamat_pengiriman a ON t.id_alamat = a.id_alamat
-             JOIN metode_pembayaran mp ON t.id_metode_pembayaran = mp.id_metode
-             LEFT JOIN voucher_marketplace v ON t.id_voucher = v.id_voucher
-             WHERE t.id_transaksi = $1 AND t.id_user = $2`,
-            [id, req.user.id_user]
-        );
-        
-        if (orderResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan' });
-        }
-        
-        const order = orderResult.rows[0];
-        
-        const detailsResult = await pool.query(
-            `SELECT dt.*, p.gambar_utama, t.nama_toko
-             FROM detail_transaksi dt
-             JOIN produk p ON dt.id_produk = p.id_produk
-             JOIN toko t ON dt.id_toko = t.id_toko
-             WHERE dt.id_transaksi = $1`,
-            [id]
-        );
-        
-        const paymentResult = await pool.query(
-            `SELECT * FROM pembayaran WHERE id_transaksi = $1`,
-            [id]
-        );
-        
-        const shippingResult = await pool.query(
-            `SELECT p.*, k.nama_kurir
-             FROM pengiriman p
-             LEFT JOIN kurir k ON p.id_kurir = k.id_kurir
-             WHERE p.id_transaksi = $1`,
-            [id]
-        );
-        
-        let tracking = [];
-        if (shippingResult.rows.length > 0) {
-            const trackingResult = await pool.query(
-                `SELECT * FROM tracking_detail WHERE id_pengiriman = $1 ORDER BY waktu DESC`,
-                [shippingResult.rows[0].id_pengiriman]
-            );
-            tracking = trackingResult.rows;
-        }
-        
-        res.json({
-            success: true,
-            order,
-            details: detailsResult.rows,
-            payment: paymentResult.rows[0] || null,
-            shipping: shippingResult.rows[0] || null,
-            tracking
-        });
-    } catch (error) {
-        console.error('Get order detail error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    const userId = req.user.id_user;
+
+    const order = await pool.query(
+      'SELECT * FROM transaksi WHERE id_transaksi = $1 AND id_user = $2',
+      [id, userId]
+    );
+
+    if (order.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order tidak ditemukan' });
     }
+
+    const items = await pool.query(
+      'SELECT * FROM detail_transaksi WHERE id_transaksi = $1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      order: order.rows[0],
+      items: items.rows
+    });
+  } catch (error) {
+    console.error('Get order detail error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Cancel order
+// ================= CANCEL ORDER =================
 const cancelOrder = async (req, res) => {
-    const { id } = req.params;
-    const { alasan } = req.body;
+  const { id } = req.params;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
     
-    const client = await pool.connect();
+    const orderCheck = await client.query(
+      'SELECT * FROM transaksi WHERE id_transaksi = $1 AND id_user = $2 AND status_order = $3',
+      [id, userId, 'pending']
+    );
     
-    try {
-        await client.query('BEGIN');
-        
-        const orderResult = await client.query(
-            `SELECT status_order FROM transaksi 
-             WHERE id_transaksi = $1 AND id_user = $2`,
-            [id, req.user.id_user]
-        );
-        
-        if (orderResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan' });
-        }
-        
-        const currentStatus = orderResult.rows[0].status_order;
-        
-        if (currentStatus !== 'pending' && currentStatus !== 'dibayar') {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ success: false, message: 'Pesanan tidak dapat dibatalkan' });
-        }
-        
-        await client.query(
-            `UPDATE transaksi 
-             SET status_order = 'dibatalkan', 
-                 canceled_at = CURRENT_TIMESTAMP,
-                 alasan_batal = $1
-             WHERE id_transaksi = $2`,
-            [alasan || 'Dibatalkan oleh pembeli', id]
-        );
-        
-        const detailsResult = await client.query(
-            `SELECT id_produk, id_varian, jumlah FROM detail_transaksi WHERE id_transaksi = $1`,
-            [id]
-        );
-        
-        for (const detail of detailsResult.rows) {
-            if (detail.id_varian) {
-                await client.query(
-                    `UPDATE varian_produk SET stok = stok + $1 WHERE id_varian = $2`,
-                    [detail.jumlah, detail.id_varian]
-                );
-            } else {
-                await client.query(
-                    `UPDATE produk SET stok = stok + $1 WHERE id_produk = $2`,
-                    [detail.jumlah, detail.id_produk]
-                );
-            }
-        }
-        
-        await client.query(
-            `INSERT INTO notifikasi (id_user, judul, pesan, tipe, link)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [req.user.id_user, 'Pesanan Dibatalkan ❌', 
-             `Pesanan Anda telah dibatalkan. ${alasan ? 'Alasan: ' + alasan : ''}`, 
-             'order', `/orders/${id}`]
-        );
-        
-        await client.query('COMMIT');
-        
-        res.json({ success: true, message: 'Pesanan berhasil dibatalkan' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Cancel order error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    } finally {
-        client.release();
+    if (orderCheck.rows.length === 0) {
+      throw new Error('Order tidak ditemukan atau sudah diproses');
     }
+    
+    const orderItems = await client.query(
+      'SELECT * FROM detail_transaksi WHERE id_transaksi = $1',
+      [id]
+    );
+    
+    for (const item of orderItems.rows) {
+      await client.query(
+        'UPDATE produk SET stok = stok + $1 WHERE id_produk = $2',
+        [item.jumlah, item.id_produk]
+      );
+    }
+    
+    await client.query(
+      'UPDATE transaksi SET status_order = $1 WHERE id_transaksi = $2',
+      ['cancelled', id]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Pesanan dibatalkan, stok dikembalikan' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Cancel order error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
 };
 
-module.exports = { createOrder, getOrders, getOrderDetail, cancelOrder };
+// ================= UPDATE ORDER STATUS =================
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await pool.query(
+      'UPDATE transaksi SET status_order = $1 WHERE id_transaksi = $2 RETURNING *',
+      [status, id]
+    );
+
+    res.json({ success: true, order: result.rows[0] });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ================= PROCESS PAYMENT =================
+const processPayment = async (req, res) => {
+  const { id } = req.params;
+  const { metode_pembayaran, alamat_pengiriman, kurir, biaya_pengiriman } = req.body;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const order = await client.query(
+      'SELECT * FROM transaksi WHERE id_transaksi = $1 AND id_user = $2 AND status_pembayaran = $3',
+      [id, userId, 'pending']
+    );
+    
+    if (order.rows.length === 0) {
+      throw new Error('Order tidak ditemukan atau sudah dibayar');
+    }
+    
+    const result = await client.query(
+      `UPDATE transaksi 
+       SET status_pembayaran = 'paid', 
+           status_order = 'processing',
+           metode_pembayaran = COALESCE($1, metode_pembayaran),
+           alamat_pengiriman = COALESCE($2, alamat_pengiriman),
+           kurir = COALESCE($3, kurir),
+           biaya_pengiriman = COALESCE($4, biaya_pengiriman),
+           paid_at = NOW(),
+           updated_at = NOW()
+       WHERE id_transaksi = $5 
+       RETURNING *`,
+      [metode_pembayaran, alamat_pengiriman, kurir, biaya_pengiriman, id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      order: result.rows[0],
+      message: '✅ Pembayaran berhasil! Pesanan akan segera diproses. Tunggu paket Anda datang! 🚚'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Payment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
+};
+
+// Alias untuk createOrder
+const createOrder = checkout;
+
+// ================= EXPORT =================
+module.exports = {
+  checkout,
+  createOrder,
+  buyNow,
+  getOrders,
+  getOrderDetail,
+  cancelOrder,
+  updateOrderStatus,
+  processPayment
+};

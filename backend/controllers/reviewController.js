@@ -1,139 +1,100 @@
-const pool = require('../config/database');
+﻿const pool = require('../config/database');
 
-// Get product reviews
+// Create review
+const createReview = async (req, res) => {
+  const { id_produk, rating, komentar, id_transaksi } = req.body;
+  const userId = req.user.id_user;
+  
+  console.log('Creating review:', { id_produk, rating, komentar, id_transaksi, userId });
+  
+  try {
+    // Cek apakah user sudah membeli produk ini
+    const checkPurchase = await pool.query(
+      `SELECT * FROM detail_transaksi dt
+       JOIN transaksi t ON dt.id_transaksi = t.id_transaksi
+       WHERE dt.id_produk = $1 AND t.id_user = $2 AND t.status_order = 'completed'`,
+      [id_produk, userId]
+    );
+    
+    // Cek apakah sudah pernah review
+    const existingReview = await pool.query(
+      'SELECT * FROM review_produk WHERE id_produk = $1 AND id_user = $2',
+      [id_produk, userId]
+    );
+    
+    if (existingReview.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'Anda sudah pernah mereview produk ini' });
+    }
+    
+    // Insert review
+    const result = await pool.query(
+      `INSERT INTO review_produk (id_produk, id_user, rating, komentar, id_transaksi, is_verified_purchase)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [id_produk, userId, rating, komentar, id_transaksi, checkPurchase.rows.length > 0]
+    );
+    
+    // Update rating rata-rata produk
+    await pool.query(
+      `UPDATE produk 
+       SET rating_avg = (
+         SELECT AVG(rating) FROM review_produk WHERE id_produk = $1
+       )
+       WHERE id_produk = $1`,
+      [id_produk]
+    );
+    
+    res.json({ success: true, review: result.rows[0], message: 'Ulasan berhasil dikirim' });
+  } catch (error) {
+    console.error('Create review error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// Get reviews for a product
 const getProductReviews = async (req, res) => {
-    const { id } = req.params;
-    const { page = 1, limit = 10, sort = 'newest' } = req.query;
-    const offset = (page - 1) * limit;
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(
+      `SELECT r.*, u.name, u.avatar 
+       FROM review_produk r
+       JOIN users u ON r.id_user = u.id_user
+       WHERE r.id_produk = $1
+       ORDER BY r.created_at DESC`,
+      [id]
+    );
     
-    try {
-        let orderBy = '';
-        if (sort === 'newest') orderBy = 'r.created_at DESC';
-        else if (sort === 'oldest') orderBy = 'r.created_at ASC';
-        else if (sort === 'highest') orderBy = 'r.rating DESC';
-        else if (sort === 'lowest') orderBy = 'r.rating ASC';
-        
-        const result = await pool.query(
-            `SELECT r.*, u.username, u.name, u.avatar
-             FROM review_produk r
-             JOIN users u ON r.id_user = u.id_user
-             WHERE r.id_produk = $1
-             ORDER BY ${orderBy}
-             LIMIT $2 OFFSET $3`,
-            [id, limit, offset]
-        );
-        
-        const countResult = await pool.query(
-            `SELECT COUNT(*) as total FROM review_produk WHERE id_produk = $1`,
-            [id]
-        );
-        
-        const ratingStats = await pool.query(
-            `SELECT 
-                AVG(rating) as avg_rating,
-                COUNT(*) as total_reviews,
-                COUNT(CASE WHEN rating = 5 THEN 1 END) as rating_5,
-                COUNT(CASE WHEN rating = 4 THEN 1 END) as rating_4,
-                COUNT(CASE WHEN rating = 3 THEN 1 END) as rating_3,
-                COUNT(CASE WHEN rating = 2 THEN 1 END) as rating_2,
-                COUNT(CASE WHEN rating = 1 THEN 1 END) as rating_1
-             FROM review_produk
-             WHERE id_produk = $1`,
-            [id]
-        );
-        
-        res.json({
-            success: true,
-            reviews: result.rows,
-            stats: ratingStats.rows[0],
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: parseInt(countResult.rows[0].total),
-                totalPages: Math.ceil(parseInt(countResult.rows[0].total) / limit)
-            }
-        });
-    } catch (error) {
-        console.error('Get product reviews error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
+    res.json({ success: true, reviews: result.rows });
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Add review
-const addReview = async (req, res) => {
-    const { id } = req.params;
-    const { rating, komentar, gambar } = req.body;
+// Get user reviews
+const getUserReviews = async (req, res) => {
+  const userId = req.user.id_user;
+  
+  try {
+    const result = await pool.query(
+      `SELECT r.*, p.nama_produk, p.gambar_utama
+       FROM review_produk r
+       JOIN produk p ON r.id_produk = p.id_produk
+       WHERE r.id_user = $1
+       ORDER BY r.created_at DESC`,
+      [userId]
+    );
     
-    try {
-        // Check if user has purchased this product
-        const purchaseCheck = await pool.query(
-            `SELECT dt.id_detail FROM detail_transaksi dt
-             JOIN transaksi t ON dt.id_transaksi = t.id_transaksi
-             WHERE dt.id_produk = $1 AND t.id_user = $2 AND t.status_order = 'selesai'
-             LIMIT 1`,
-            [id, req.user.id_user]
-        );
-        
-        if (purchaseCheck.rows.length === 0) {
-            return res.status(400).json({ success: false, message: 'Anda hanya dapat memberikan review untuk produk yang sudah dibeli' });
-        }
-        
-        // Check if already reviewed
-        const existingReview = await pool.query(
-            `SELECT id_review FROM review_produk WHERE id_produk = $1 AND id_user = $2`,
-            [id, req.user.id_user]
-        );
-        
-        if (existingReview.rows.length > 0) {
-            return res.status(400).json({ success: false, message: 'Anda sudah memberikan review untuk produk ini' });
-        }
-        
-        const result = await pool.query(
-            `INSERT INTO review_produk (id_produk, id_user, rating, komentar, gambar, is_verified_purchase)
-             VALUES ($1, $2, $3, $4, $5, true)
-             RETURNING *`,
-            [id, req.user.id_user, rating, komentar, gambar ? [gambar] : null]
-        );
-        
-        // Update product rating
-        await pool.query(
-            `UPDATE produk 
-             SET rating_avg = (SELECT AVG(rating) FROM review_produk WHERE id_produk = $1),
-                 total_review = (SELECT COUNT(*) FROM review_produk WHERE id_produk = $1)
-             WHERE id_produk = $1`,
-            [id]
-        );
-        
-        res.json({ success: true, message: 'Review berhasil ditambahkan', review: result.rows[0] });
-    } catch (error) {
-        console.error('Add review error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
+    res.json({ success: true, reviews: result.rows });
+  } catch (error) {
+    console.error('Get user reviews error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Seller reply to review
-const replyReview = async (req, res) => {
-    const { id } = req.params;
-    const { balasan } = req.body;
-    
-    try {
-        const result = await pool.query(
-            `UPDATE review_produk 
-             SET balasan_toko = $1, updated_at = CURRENT_TIMESTAMP
-             WHERE id_review = $2
-             RETURNING *`,
-            [balasan, id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Review tidak ditemukan' });
-        }
-        
-        res.json({ success: true, message: 'Balasan berhasil ditambahkan', review: result.rows[0] });
-    } catch (error) {
-        console.error('Reply review error:', error);
-        res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
-    }
+module.exports = {
+  createReview,
+  getProductReviews,
+  getUserReviews
 };
-
-module.exports = { getProductReviews, addReview, replyReview };

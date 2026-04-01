@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import FlashSaleSection from '../components/FlashSaleSection';
 
 // ProductCard component di dalam file yang sama (agar tidak perlu import)
 function ProductCard({ product }) {
@@ -106,6 +107,19 @@ function Home() {
     { number: '4.8', label: 'Rating' }
   ]
 
+  {/* Services */}
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+  {/* ... services content ... */}
+</div>
+
+{/* Flash Sale Section - TAMBAHKAN INI */}
+<FlashSaleSection />
+
+{/* Stats */}
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
+  {/* ... stats content ... */}
+</div>
+
   const categoryIcons = {
     'Smartphone': '📱', 'Laptop & Komputer': '💻', 'Tablet': '📟',
     'TV & Home Theater': '📺', 'Audio': '🎧', 'Kulkas': '🧊',
@@ -117,11 +131,11 @@ function Home() {
       try {
         const [productsRes, featuredRes, categoriesRes] = await Promise.all([
           fetch('http://localhost:5555/api/products').then(r => r.json()),
-          fetch('http://localhost:5555/api/products?is_featured=true').then(r => r.json()),
+          fetch('http://localhost:5555/api/produk?is_featured=true').then(r => r.json()),
           fetch('http://localhost:5555/api/categories').then(r => r.json())
         ])
         setProducts(productsRes.products || [])
-        setFeaturedProducts(featuredRes.products || [])
+        setFeaturedProducts(featuredRes.produk || [])
         setCategories(categoriesRes.categories || [])
       } catch (error) {
         console.error('Error fetching data:', error)

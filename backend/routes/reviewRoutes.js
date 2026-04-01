@@ -1,10 +1,17 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
-const { getProductReviews, addReview, replyReview } = require('../controllers/reviewController');
-const { authenticateToken, isSeller } = require('../middleware/auth');
+const {
+    createReview,
+    getProductReviews,
+    getUserReviews
+} = require('../controllers/reviewController');
+const { authenticateToken } = require('../middleware/auth');
 
+// Public routes
 router.get('/product/:id', getProductReviews);
-router.post('/product/:id', authenticateToken, addReview);
-router.put('/:id/reply', authenticateToken, isSeller, replyReview);
+
+// Protected routes (perlu login)
+router.post('/', authenticateToken, createReview);
+router.get('/my-reviews', authenticateToken, getUserReviews);
 
 module.exports = router;

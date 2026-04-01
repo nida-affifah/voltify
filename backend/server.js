@@ -30,7 +30,7 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// CORS configuration - DIPERBAIKI
+// CORS configuration
 app.use(cors({
     origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
@@ -74,7 +74,7 @@ io.on('connection', (socket) => {
 const chatController = require('./controllers/chatController');
 chatController.setIo(io);
 
-// Import Routes
+// ========== IMPORT ROUTES (SATU KALI SAJA) ==========
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
@@ -87,13 +87,17 @@ const wishlistRoutes = require('./routes/wishlistRoutes');
 const postinganRoutes = require('./routes/postinganRoutes');
 const liveRoutes = require('./routes/liveRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const affiliateRoutes = require('./routes/affiliateRoutes');
+const affiliateRoutes = require('./routes/affiliateRoutes');   // ← HANYA SEKALI
 const tokoRoutes = require('./routes/tokoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const deliveryRoutes = require('./routes/deliveryRoutes');     // ← TAMBAHKAN
+const adminRoutes = require('./routes/adminRoutes');           // ← TAMBAHKAN
+const sellerRoutes = require('./routes/sellerRoutes');         // ← TAMBAHKAN
+const testRoutes = require('./routes/testRoutes');
 
-// Use Routes
+// ========== USE ROUTES ==========
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
+app.use('/api/produk', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -107,6 +111,11 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/affiliate', affiliateRoutes);
 app.use('/api/toko', tokoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/seller', sellerRoutes);
+app.use('/api/test', testRoutes);
+
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -132,7 +141,7 @@ app.get('/', (req, res) => {
         status: 'running',
         endpoints: {
             auth: '/api/auth',
-            products: '/api/products',
+            produk: '/api/produk',
             cart: '/api/cart',
             orders: '/api/orders',
             categories: '/api/categories',
@@ -145,7 +154,10 @@ app.get('/', (req, res) => {
             chat: '/api/chat',
             affiliate: '/api/affiliate',
             toko: '/api/toko',
-            dashboard: '/api/dashboard'
+            dashboard: '/api/dashboard',
+            delivery: '/api/delivery',
+            admin: '/api/admin',
+            seller: '/api/seller'
         }
     });
 });

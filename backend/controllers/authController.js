@@ -249,4 +249,12 @@ const changePassword = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, updateProfile, uploadAvatar, changePassword };
+// ========== EKSPOR HANYA FUNGSI YANG ADA ==========
+module.exports = { 
+    register, 
+    login, 
+    getMe, 
+    updateProfile, 
+    uploadAvatar, 
+    changePassword 
+};

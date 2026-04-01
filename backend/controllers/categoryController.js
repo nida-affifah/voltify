@@ -35,7 +35,7 @@ const getCategoryById = async (req, res) => {
     }
 };
 
-// Get products by category
+// Get produk by category
 const getProductsByCategory = async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 20 } = req.query;
@@ -59,7 +59,7 @@ const getProductsByCategory = async (req, res) => {
         
         res.json({
             success: true,
-            products: result.rows,
+            produk: result.rows,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -67,7 +67,7 @@ const getProductsByCategory = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get products by category error:', error);
+        console.error('Get produk by category error:', error);
         res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
     }
 };

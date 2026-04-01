@@ -1,0 +1,105 @@
+﻿const pool = require('../config/database');
+
+// ... kode lain tetap sama ...
+
+// Get all orders (transaksi user) dengan detail lengkap
+const getOrders = async (req, res) => {
+  try {
+    const userId = req.user.id_user;
+    const result = await pool.query(
+      `SELECT t.*, 
+              COALESCE(t.metode_pembayaran, 'pending') as metode_pembayaran,
+              COALESCE(t.biaya_pengiriman, 15000) as biaya_pengiriman,
+              COALESCE(t.kurir, 'JNE Reguler') as kurir,
+              COALESCE(t.alamat_pengiriman, 'Jl. Contoh Alamat No.123, Jakarta') as alamat_pengiriman
+       FROM transaksi t
+       WHERE t.id_user = $1 
+       ORDER BY t.created_at DESC`,
+      [userId]
+    );
+    
+    // Ambil items untuk setiap transaksi
+    const ordersWithItems = [];
+    for (const order of result.rows) {
+      const items = await pool.query(
+        `SELECT dt.*, p.nama_produk, p.gambar_utama
+         FROM detail_transaksi dt
+         JOIN produk p ON dt.id_produk = p.id_produk
+         WHERE dt.id_transaksi = $1`,
+        [order.id_transaksi]
+      );
+      ordersWithItems.push({
+        ...order,
+        items: items.rows
+      });
+    }
+    
+    res.json({ success: true, orders: ordersWithItems });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Process payment for order
+const processPayment = async (req, res) => {
+  const { id } = req.params;
+  const { metode_pembayaran, payment_method_id, alamat_pengiriman, kurir, biaya_pengiriman } = req.body;
+  const userId = req.user.id_user;
+  
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Cek order
+    const order = await client.query(
+      'SELECT * FROM transaksi WHERE id_transaksi = $1 AND id_user = $2 AND status_pembayaran = $3',
+      [id, userId, 'pending']
+    );
+    
+    if (order.rows.length === 0) {
+      throw new Error('Order tidak ditemukan atau sudah dibayar');
+    }
+    
+    // Update status pembayaran dan data lainnya
+    const result = await client.query(
+      `UPDATE transaksi 
+       SET status_pembayaran = 'paid', 
+           status_order = 'processing',
+           metode_pembayaran = COALESCE($1, metode_pembayaran),
+           alamat_pengiriman = COALESCE($2, alamat_pengiriman),
+           kurir = COALESCE($3, kurir),
+           biaya_pengiriman = COALESCE($4, biaya_pengiriman),
+           paid_at = NOW(),
+           updated_at = NOW()
+       WHERE id_transaksi = $5 
+       RETURNING *`,
+      [metode_pembayaran, alamat_pengiriman, kurir, biaya_pengiriman, id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      order: result.rows[0],
+      message: '✅ Pembayaran berhasil! Pesanan akan segera diproses. Tunggu paket Anda datang! 🚚'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Payment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = {
+  checkout,
+  createOrder,
+  buyNow,
+  getOrders,
+  getOrderDetail,
+  cancelOrder,
+  updateOrderStatus,
+  processPayment
+};

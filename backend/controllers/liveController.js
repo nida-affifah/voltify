@@ -50,7 +50,7 @@ const getLiveStreamById = async (req, res) => {
         
         res.json({ 
             success: true, 
-            stream: { ...stream, products: productsResult.rows }
+            stream: { ...stream, produk: productsResult.rows }
         });
     } catch (error) {
         console.error('Get live stream error:', error);

@@ -12,7 +12,7 @@ const createDirIfNotExist = (dir) => {
 
 createDirIfNotExist('uploads');
 createDirIfNotExist('uploads/users');
-createDirIfNotExist('uploads/products');
+createDirIfNotExist('uploads/produk');
 createDirIfNotExist('uploads/reviews');
 createDirIfNotExist('uploads/postingan');
 
@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         let folder = 'uploads/';
         if (file.fieldname === 'avatar') folder += 'users/';
-        else if (file.fieldname === 'product_image') folder += 'products/';
+        else if (file.fieldname === 'product_image') folder += 'produk/';
         else if (file.fieldname === 'review_image') folder += 'reviews/';
         else if (file.fieldname === 'postingan_image') folder += 'postingan/';
         else folder += 'others/';
