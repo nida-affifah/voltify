@@ -1,0 +1,18 @@
+﻿{
+  "builds": [
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "frontend/dist",
+        "installCommand": "cd frontend && npm install --include=dev"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/$1"
+    }
+  ]
+}
