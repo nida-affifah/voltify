@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿// src/pages/ProductDetail.jsx
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 
 function ProductDetail() {
@@ -81,39 +82,36 @@ function ProductDetail() {
     }
   }
 
-  const handleBuyNow = async () => {
-    const token = localStorage.getItem('token')
+  const buyNow = async () => {
     if (!token) {
-      alert('Silakan login terlebih dahulu')
-      navigate('/login')
+      if (window.confirm('Silakan login terlebih dahulu. Login sekarang?')) {
+        navigate('/login')
+      }
       return
     }
     
+    // Tambahkan ke keranjang dulu, lalu redirect ke checkout
     try {
-      const response = await fetch('http://localhost:5555/api/orders/buy-now', {
+      const res = await fetch('http://localhost:5555/api/cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          id_produk: product.id_produk,
+          id_produk: parseInt(id),
           jumlah: quantity
         })
       })
-      
-      const data = await response.json()
-      console.log('Buy now response:', data)
-      
+      const data = await res.json()
       if (data.success) {
-        alert('✅ Pesanan berhasil dibuat!')
-        navigate('/orders')
+        navigate('/checkout')
       } else {
-        alert(data.message || 'Gagal membuat pesanan')
+        alert(data.message || 'Gagal melanjutkan ke checkout')
       }
     } catch (error) {
-      console.error('Error:', error)
-      alert('Gagal membuat pesanan')
+      console.error(error)
+      alert('Gagal melanjutkan ke checkout')
     }
   }
 
@@ -153,6 +151,7 @@ function ProductDetail() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: 'white' }}>
+      {/* Breadcrumb */}
       <div style={{ marginBottom: '20px', fontSize: '14px', color: '#888' }}>
         <Link to="/" style={{ color: '#888', textDecoration: 'none' }}>Beranda</Link> {'>'}
         <Link to="/products" style={{ color: '#888', textDecoration: 'none', marginLeft: '5px' }}>Produk</Link> {'>'}
@@ -160,6 +159,7 @@ function ProductDetail() {
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px' }}>
+        {/* Gambar Produk */}
         <div style={{ flex: 1, minWidth: '300px' }}>
           <div style={{
             background: '#1a1a2e',
@@ -176,9 +176,11 @@ function ProductDetail() {
           </div>
         </div>
 
+        {/* Info Produk */}
         <div style={{ flex: 1, minWidth: '300px' }}>
           <h1 style={{ fontSize: '28px', marginBottom: '16px' }}>{product.nama_produk}</h1>
           
+          {/* Rating */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
             <span style={{ background: '#ff9800', padding: '4px 8px', borderRadius: '8px', fontSize: '14px' }}>
               ⭐ {product.rating_avg || 0}/5
@@ -187,6 +189,7 @@ function ProductDetail() {
             <span style={{ color: '#888' }}>| Stok: {product.stok > 0 ? `${product.stok} pcs` : 'Habis'}</span>
           </div>
 
+          {/* Harga */}
           <div style={{ marginBottom: '20px' }}>
             {discount > 0 && (
               <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '18px', marginRight: '12px' }}>
@@ -203,6 +206,7 @@ function ProductDetail() {
             )}
           </div>
 
+          {/* Pilih Jumlah */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px' }}>Jumlah:</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -237,6 +241,7 @@ function ProductDetail() {
             </div>
           </div>
 
+          {/* Tombol Aksi */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
             <button
               onClick={addToCart}
@@ -250,7 +255,11 @@ function ProductDetail() {
                 borderRadius: '12px',
                 cursor: product.stok <= 0 ? 'not-allowed' : 'pointer',
                 fontWeight: 'bold',
-                fontSize: '16px'
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
             >
               {adding ? '⏳ Menambah...' : product.stok <= 0 ? '❌ Stok Habis' : '🛒 Tambah ke Keranjang'}
@@ -258,21 +267,45 @@ function ProductDetail() {
             
             {product.stok > 0 && (
               <button 
-                onClick={handleBuyNow}
-                style={{
-                  flex: 1,
-                  background: '#ff4444',
-                  color: 'white',
-                  border: 'none',
-                  padding: '14px 24px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}
-              >
-                💰 Beli Sekarang
-              </button>
+  onClick={async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Silakan login terlebih dahulu');
+        window.location.href = '/login';
+        return;
+      }
+      
+      const response = await fetch('http://localhost:5555/api/orders/buy-now', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_produk: product.id_produk,
+          jumlah: quantity || 1,
+          alamat_pengiriman: "Jl. Contoh Alamat No.123",
+          metode_pembayaran: "transfer"
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Pesanan berhasil dibuat!');
+        window.location.href = '/orders';
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal membuat pesanan');
+    }
+  }}
+  className="btn-buy"
+>
+  💰 Beli Sekarang
+</button>
             )}
             
             <button
@@ -291,6 +324,7 @@ function ProductDetail() {
             </button>
           </div>
 
+          {/* Deskripsi */}
           <div style={{
             background: '#1a1a2e',
             padding: '20px',
@@ -304,6 +338,7 @@ function ProductDetail() {
             </p>
           </div>
 
+          {/* Info Toko */}
           <div style={{
             background: '#1a1a2e',
             padding: '20px',
@@ -318,6 +353,7 @@ function ProductDetail() {
             </Link>
           </div>
 
+          {/* Edit Product (khusus seller) */}
           {isSeller && (
             <Link to={`/toko/products/edit/${product.id_produk}`}>
               <button style={{
